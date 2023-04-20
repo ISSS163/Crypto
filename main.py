@@ -1,6 +1,5 @@
 # This is a sample Python script.
 
-import threading
 import math
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
@@ -8,12 +7,10 @@ import random
 import time
 
 import cv2
-import numpy
 import numpy as np
-from PIL import Image
-from PIL.Image import Image
 from matplotlib import pyplot as plt
-from skimage import img_as_float
+
+from skimage.util import img_as_float
 
 
 # Переписать генерацию ключа в массив
@@ -167,7 +164,6 @@ def calculate_math(enctypted):
     # print('var_x', var_x)
     # print('var_y', var_y)
 
-
     # con_xy = 1 / (enctypted.shape[0] * enctypted.shape[1]) * np.sum()
 
 
@@ -209,10 +205,8 @@ if __name__ == '__main__':
 
     file = open("keys.txt", "w")
 
-
-
     while (vid_capture.isOpened()):
-        # Метод vid_capture.read() возвращает кортеж, первым элементом которого является логическое значение
+        # Метод vid_capture.read() возвращает кортеж, первым элементом которого является логическое значение,
         # а вторым - кадр
         ret, frame = vid_capture.read()
         if ret:
@@ -231,7 +225,7 @@ if __name__ == '__main__':
                                              convert(hk))
             file.write(secret_key)
             encrypted = encrypt(img_b, secret_key, img)
-            decrypted = decrypt(encrypted, secret_key)
+            # decrypted = decrypt(encrypted, secret_key)
             output.write(encrypted)
         else:
             print('Поток отключен')
@@ -240,27 +234,28 @@ if __name__ == '__main__':
     output.release()
     file.close()
 
+    vid_capture = cv2.VideoCapture('output_video.avi')
+    frame_width = int(vid_capture.get(3))
+    frame_height = int(vid_capture.get(4))
+    frame_size = (frame_width, frame_height)
+    output = cv2.VideoWriter('output_decrypted_video.avi',
+                             cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 20, frame_size)
+    cnt = 0
+    while (vid_capture.isOpened()):
+        # Метод vid_capture.read() возвращает кортеж, первым элементом которого является логическое значение,
+        # а вторым - кадр
+        ret, frame = vid_capture.read()
+        if ret:
 
-    # vid_capture = cv2.VideoCapture('output_video.avi')
-    # frame_width = int(vid_capture.get(3))
-    # frame_height = int(vid_capture.get(4))
-    # frame_size = (frame_width, frame_height)
-    # output = cv2.VideoWriter('output_decrypted_video.avi',
-    #                          cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 20, frame_size)
-    # while (vid_capture.isOpened()):
-    #     # Метод vid_capture.read() возвращает кортеж, первым элементом которого является логическое значение
-    #     # а вторым - кадр
-    #     ret, frame = vid_capture.read()
-    #     if ret:
-    #
-    #         n, img_b = generate_n(frame)
-    #         decrypted = decrypt(frame, secret_key)
-    #         output.write(decrypted)
-    #     else:
-    #         print('Поток отключен')
-    #         break
+            img = cv2.imread(frame, cv2.IMREAD_GRAYSCALE)
 
-
+            n, img_b = generate_n(img)
+            decrypted = decrypt(img, secret_key)
+            output.write(decrypted)
+            cnt += 1
+        else:
+            print('Поток отключен')
+            break
 
     # calculate_math(enctypted)
     #
