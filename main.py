@@ -9,7 +9,10 @@ import time
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
-
+from skimage.color import rgb2gray
+import skvideo
+skvideo.setFFmpegPath('C:/Users/1324l/PycharmProjects/Crypto/ffmpeg-master-latest-win64-gpl/bin/')
+import skvideo.io
 from skimage.util import img_as_float
 
 
@@ -184,6 +187,7 @@ def plot_img_and_hist(image, axes, bins=256):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+
     # block size = 256
     start = time.time()
     key = generate_key()
@@ -200,17 +204,21 @@ if __name__ == '__main__':
     frame_width = int(vid_capture.get(3))
     frame_height = int(vid_capture.get(4))
     frame_size = (frame_width, frame_height)
-    output = cv2.VideoWriter('output_video.avi',
-                             cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 20, frame_size)
-
-    file = open("keys.txt", "w")
+    writer = skvideo.io.FFmpegWriter('output_video.avi', outputdict={
+        '-vcodec': 'libx264',  # use the h.264 codec
+        '-crf': '0',  # set the constant rate factor to 0, which is lossless
+        '-preset': 'veryslow'  # the slower the better compression, in princple, try
+        # other options see https://trac.ffmpeg.org/wiki/Encode/H.264
+    })
+    #output = cv2.VideoWriter('output_video.avi',
+    #                         cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 5, frame_size)
 
     while (vid_capture.isOpened()):
         # Метод vid_capture.read() возвращает кортеж, первым элементом которого является логическое значение,
         # а вторым - кадр
         ret, frame = vid_capture.read()
         if ret:
-            img = cv2.imread(frame, cv2.IMREAD_GRAYSCALE)
+            img = np.int_(rgb2gray(frame) * 255)
 
             n, img_b = generate_n(img)
 
@@ -223,23 +231,22 @@ if __name__ == '__main__':
 
             secret_key = generate_secret_key(convert(bk), convert(lk), convert(ck), convert(sk), convert(tk),
                                              convert(hk))
-            file.write(secret_key)
+            np.savez_compressed('keys/key.npz', secret_key)
             encrypted = encrypt(img_b, secret_key, img)
             # decrypted = decrypt(encrypted, secret_key)
-            output.write(encrypted)
+            writer.writeFrame(encrypted)
         else:
             print('Поток отключен')
             break
     vid_capture.release()
-    output.release()
-    file.close()
+    writer.release()
 
     vid_capture = cv2.VideoCapture('output_video.avi')
     frame_width = int(vid_capture.get(3))
     frame_height = int(vid_capture.get(4))
     frame_size = (frame_width, frame_height)
     output = cv2.VideoWriter('output_decrypted_video.avi',
-                             cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 20, frame_size)
+                             cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 5, frame_size)
     cnt = 0
     while (vid_capture.isOpened()):
         # Метод vid_capture.read() возвращает кортеж, первым элементом которого является логическое значение,
@@ -247,15 +254,18 @@ if __name__ == '__main__':
         ret, frame = vid_capture.read()
         if ret:
 
-            img = cv2.imread(frame, cv2.IMREAD_GRAYSCALE)
+            img = np.int_(rgb2gray(frame) * 255)
+            keys = np.load('keys/key.npz')
 
             n, img_b = generate_n(img)
-            decrypted = decrypt(img, secret_key)
+            decrypted = decrypt(img, keys[cnt])
             output.write(decrypted)
             cnt += 1
         else:
             print('Поток отключен')
             break
+    vid_capture.release()
+    output.release()
 
     # calculate_math(enctypted)
     #
