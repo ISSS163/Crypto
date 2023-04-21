@@ -1,5 +1,5 @@
 # This is a sample Python script.
-
+import aes
 import math
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
@@ -11,7 +11,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from skimage.color import rgb2gray
 import skvideo
-skvideo.setFFmpegPath('C:/Users/1324l/PycharmProjects/Crypto/ffmpeg-master-latest-win64-gpl/bin/')
+
+skvideo.setFFmpegPath('C:/Users/DPOPOV/PycharmProjects/Crypto/ffmpeg-master-latest-win64-gpl/bin/')
 import skvideo.io
 from skimage.util import img_as_float
 
@@ -190,8 +191,6 @@ if __name__ == '__main__':
 
     # block size = 256
     start = time.time()
-    key = generate_key()
-    ic = generate_i_c(key)
     l1 = 4
     l2 = 4
     l3 = 2.59
@@ -200,19 +199,21 @@ if __name__ == '__main__':
     a = random.uniform(1.07, 1.09)
     mu = 0.4
 
-    vid_capture = cv2.VideoCapture('video.mkv')
+    vid_capture = cv2.VideoCapture('video.MOV')
     frame_width = int(vid_capture.get(3))
     frame_height = int(vid_capture.get(4))
     frame_size = (frame_width, frame_height)
+    savez_dict = dict()
     writer = skvideo.io.FFmpegWriter('output_video.avi', outputdict={
         '-vcodec': 'libx264',  # use the h.264 codec
         '-crf': '0',  # set the constant rate factor to 0, which is lossless
         '-preset': 'veryslow'  # the slower the better compression, in princple, try
         # other options see https://trac.ffmpeg.org/wiki/Encode/H.264
     })
-    #output = cv2.VideoWriter('output_video.avi',
+    # output = cv2.VideoWriter('output_video.avi',
     #                         cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 5, frame_size)
 
+    cnt = 0
     while (vid_capture.isOpened()):
         # Метод vid_capture.read() возвращает кортеж, первым элементом которого является логическое значение,
         # а вторым - кадр
@@ -221,7 +222,8 @@ if __name__ == '__main__':
             img = np.int_(rgb2gray(frame) * 255)
 
             n, img_b = generate_n(img)
-
+            key = generate_key()
+            ic = generate_i_c(key)
             bk = chebushev(ic, l1, n)
             lk = logistic(ic, l2, n)
             ck = cubic(ic, l3, n)
@@ -231,22 +233,31 @@ if __name__ == '__main__':
 
             secret_key = generate_secret_key(convert(bk), convert(lk), convert(ck), convert(sk), convert(tk),
                                              convert(hk))
-            np.savez_compressed('keys/key.npz', secret_key)
+            savez_dict['arr_%d' % cnt] = secret_key
             encrypted = encrypt(img_b, secret_key, img)
             # decrypted = decrypt(encrypted, secret_key)
             writer.writeFrame(encrypted)
+            cnt += 1
         else:
             print('Поток отключен')
             break
     vid_capture.release()
-    writer.release()
+    writer.close()
+    np.savez_compressed('keys/key.npz', **savez_dict)
+    aes.aes_encrypt("Hello".encode(encoding='UTF-8'))
 
     vid_capture = cv2.VideoCapture('output_video.avi')
     frame_width = int(vid_capture.get(3))
     frame_height = int(vid_capture.get(4))
     frame_size = (frame_width, frame_height)
-    output = cv2.VideoWriter('output_decrypted_video.avi',
-                             cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 5, frame_size)
+    writer = skvideo.io.FFmpegWriter('output_decrypted_video.avi', outputdict={
+        '-vcodec': 'libx264',  # use the h.264 codec
+        '-crf': '0',  # set the constant rate factor to 0, which is lossless
+        '-preset': 'veryslow'  # the slower the better compression, in princple, try
+        # other options see https://trac.ffmpeg.org/wiki/Encode/H.264
+    })
+    # output = cv2.VideoWriter('output_decrypted_video.avi',
+    #                          cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 5, frame_size)
     cnt = 0
     while (vid_capture.isOpened()):
         # Метод vid_capture.read() возвращает кортеж, первым элементом которого является логическое значение,
@@ -255,17 +266,17 @@ if __name__ == '__main__':
         if ret:
 
             img = np.int_(rgb2gray(frame) * 255)
-            keys = np.load('keys/key.npz')
+            keys = np.load('keys/key.npz', allow_pickle=True)
 
             n, img_b = generate_n(img)
-            decrypted = decrypt(img, keys[cnt])
-            output.write(decrypted)
+            decrypted = decrypt(img, keys['arr_%d' % cnt])
+            writer.writeFrame(decrypted)
             cnt += 1
         else:
             print('Поток отключен')
             break
     vid_capture.release()
-    output.release()
+    writer.close()
 
     # calculate_math(enctypted)
     #
@@ -283,3 +294,4 @@ if __name__ == '__main__':
     # # prevent overlap of y-axis labels
     # fig.tight_layout()
     # plt.show()
+# toDo Реализовать шифрование ключа, шифрование методом AES, сделать извлечение изображения из видео, атаку
