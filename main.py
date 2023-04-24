@@ -1,5 +1,5 @@
 # This is a sample Python script.
-import aes
+from aes import *
 import math
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
@@ -12,7 +12,9 @@ from matplotlib import pyplot as plt
 from skimage.color import rgb2gray
 import skvideo
 
-skvideo.setFFmpegPath('C:/Users/DPOPOV/PycharmProjects/Crypto/ffmpeg-master-latest-win64-gpl/bin/')
+import aes
+
+skvideo.setFFmpegPath('C:/Users/1324l/PycharmProjects/Crypto/ffmpeg-master-latest-win64-gpl/bin/')
 import skvideo.io
 from skimage.util import img_as_float
 
@@ -199,7 +201,7 @@ if __name__ == '__main__':
     a = random.uniform(1.07, 1.09)
     mu = 0.4
 
-    vid_capture = cv2.VideoCapture('video.MOV')
+    vid_capture = cv2.VideoCapture('video.mkv')
     frame_width = int(vid_capture.get(3))
     frame_height = int(vid_capture.get(4))
     frame_size = (frame_width, frame_height)
@@ -244,7 +246,11 @@ if __name__ == '__main__':
     vid_capture.release()
     writer.close()
     np.savez_compressed('keys/key.npz', **savez_dict)
-    aes.aes_encrypt("Hello".encode(encoding='UTF-8'))
+
+    N = len(savez_dict.keys())
+    key_aes = "HelloWorldAndRus".encode(encoding='UTF-8')
+    aes_encrypt(key_aes)
+    np.savez_compressed('keys/key1.npz', **aes_decrypt(key_aes, N))
 
     vid_capture = cv2.VideoCapture('output_video.avi')
     frame_width = int(vid_capture.get(3))
@@ -266,7 +272,7 @@ if __name__ == '__main__':
         if ret:
 
             img = np.int_(rgb2gray(frame) * 255)
-            keys = np.load('keys/key.npz', allow_pickle=True)
+            keys = np.load('keys/key1.npz', allow_pickle=True)
 
             n, img_b = generate_n(img)
             decrypted = decrypt(img, keys['arr_%d' % cnt])
@@ -294,4 +300,5 @@ if __name__ == '__main__':
     # # prevent overlap of y-axis labels
     # fig.tight_layout()
     # plt.show()
-# toDo Реализовать шифрование ключа, шифрование методом AES, сделать извлечение изображения из видео, атаку
+# toDo шифрование методом AES, сделать извлечение изображения из видео, атаку,
+#  статистические тесты
