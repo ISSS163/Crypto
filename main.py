@@ -19,9 +19,6 @@ import skvideo.io
 from skimage.util import img_as_float
 
 
-# Переписать генерацию ключа в массив
-# разобраться почему шифрование - говно (скорее всего проблема с ключом) см generate_key и generate_n
-
 def chebushev(xn, l1, n):
     x = np.zeros(n)
     x[0] = xn
@@ -300,5 +297,4 @@ if __name__ == '__main__':
     # # prevent overlap of y-axis labels
     # fig.tight_layout()
     # plt.show()
-# toDo шифрование методом AES, сделать извлечение изображения из видео, атаку,
-#  статистические тесты
+# toDo  сделать извлечение изображения из видео, атаку, статистические тесты

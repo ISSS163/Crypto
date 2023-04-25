@@ -1,8 +1,5 @@
-import Crypto
 import numpy as np
 from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
-from Crypto.Util.py3compat import bord
 
 
 def aes_encrypt(key):
