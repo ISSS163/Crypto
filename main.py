@@ -1,11 +1,12 @@
 # This is a sample Python script.
 from aes import *
 import math
+from PIL import ImageOps, Image
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 import random
 import time
-
+from searching import search
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
@@ -198,11 +199,12 @@ if __name__ == '__main__':
     a = random.uniform(1.07, 1.09)
     mu = 0.4
 
-    vid_capture = cv2.VideoCapture('video.mkv')
+    vid_capture = cv2.VideoCapture('kvas.m4v')
     frame_width = int(vid_capture.get(3))
     frame_height = int(vid_capture.get(4))
     frame_size = (frame_width, frame_height)
     savez_dict = dict()
+    coords_dict = dict()
     writer = skvideo.io.FFmpegWriter('output_video.avi', outputdict={
         '-vcodec': 'libx264',  # use the h.264 codec
         '-crf': '0',  # set the constant rate factor to 0, which is lossless
@@ -218,31 +220,42 @@ if __name__ == '__main__':
         # а вторым - кадр
         ret, frame = vid_capture.read()
         if ret:
-            img = np.int_(rgb2gray(frame) * 255)
+            persons = search(frame)
+            cnt_coord = 0
+            for i in range(len(persons)):
+                if i % 2 == 0:
+                    img = np.int_(rgb2gray(persons[i]))
+                    # img = np.int_(rgb2gray(frame) * 255)
 
-            n, img_b = generate_n(img)
-            key = generate_key()
-            ic = generate_i_c(key)
-            bk = chebushev(ic, l1, n)
-            lk = logistic(ic, l2, n)
-            ck = cubic(ic, l3, n)
-            sk = sine(ic, l4, n)
-            tk = tent(ic, mu, n)
-            hk = henon(ic, ic, a, l5, n)
+                    n, img_b = generate_n(img)
+                    key = generate_key()
+                    ic = generate_i_c(key)
+                    bk = chebushev(ic, l1, n)
+                    lk = logistic(ic, l2, n)
+                    ck = cubic(ic, l3, n)
+                    sk = sine(ic, l4, n)
+                    tk = tent(ic, mu, n)
+                    hk = henon(ic, ic, a, l5, n)
 
-            secret_key = generate_secret_key(convert(bk), convert(lk), convert(ck), convert(sk), convert(tk),
-                                             convert(hk))
-            savez_dict['arr_%d' % cnt] = secret_key
-            encrypted = encrypt(img_b, secret_key, img)
-            # decrypted = decrypt(encrypted, secret_key)
+                    secret_key = generate_secret_key(convert(bk), convert(lk), convert(ck), convert(sk), convert(tk),
+                                                     convert(hk))
+                    savez_dict['arr_%d' % cnt] = secret_key
+                    coords_dict['arr_%d_%d' % (cnt, cnt_coord)] = persons[i + 1]
+                    encrypted = encrypt(img_b, secret_key, img)
+                    frame = Image.fromarray(frame).convert("L")
+                    frame.paste(Image.fromarray(encrypted).convert("L"), box=persons[i + 1][0:2])
+                    # decrypted = decrypt(encrypted, secret_key)
+                    cnt_coord += 1
             writer.writeFrame(encrypted)
             cnt += 1
+
         else:
             print('Поток отключен')
             break
     vid_capture.release()
     writer.close()
     np.savez_compressed('keys/key.npz', **savez_dict)
+    np.savez_compressed('keys/coords.npz', **coords_dict)
 
     N = len(savez_dict.keys())
     key_aes = "HelloWorldAndRus".encode(encoding='UTF-8')
@@ -266,14 +279,18 @@ if __name__ == '__main__':
         # Метод vid_capture.read() возвращает кортеж, первым элементом которого является логическое значение,
         # а вторым - кадр
         ret, frame = vid_capture.read()
+        image = Image.fromarray(rgb2gray(np.uint8(frame)), mode="L")
         if ret:
 
             img = np.int_(rgb2gray(frame) * 255)
             keys = np.load('keys/key1.npz', allow_pickle=True)
+            coords = np.load('keys/coords.npz', allow_pickle=True)
+            for coord in coords_dict:
+                img = image.crop((coord[0], coord[1], coord[0] + coord[2], coord[1] + coord[3]))
 
-            n, img_b = generate_n(img)
-            decrypted = decrypt(img, keys['arr_%d' % cnt])
-            writer.writeFrame(decrypted)
+                decrypted = decrypt(img, keys['arr_%d' % cnt])
+                image.paste(decrypted, coord[0:2])
+            writer.writeFrame(image)
             cnt += 1
         else:
             print('Поток отключен')
@@ -281,20 +298,22 @@ if __name__ == '__main__':
     vid_capture.release()
     writer.close()
 
-    # calculate_math(enctypted)
-    #
-    # end = time.time() - start
-    # print(end)
-    #
-    # fig = plt.figure(figsize=(15, 15))
-    # axes = np.zeros((2, 1), dtype=object)
-    # axes[0, 0] = fig.add_subplot(211)
-    # axes[1, 0] = fig.add_subplot(212)
-    #
-    # # ax_img, ax_hist = plot_img_and_hist(enctypted, axes[:, 0])
-    # ax_img, ax_hist = plot_img_and_hist(decrypted, axes[:, 0])
-    # ax_hist.set_ylabel('Number of pixels', fontsize=25)
-    # # prevent overlap of y-axis labels
-    # fig.tight_layout()
-    # plt.show()
+# Проблема с счетчиком
+
+# calculate_math(enctypted)
+#
+# end = time.time() - start
+# print(end)
+#
+# fig = plt.figure(figsize=(15, 15))
+# axes = np.zeros((2, 1), dtype=object)
+# axes[0, 0] = fig.add_subplot(211)
+# axes[1, 0] = fig.add_subplot(212)
+#
+# # ax_img, ax_hist = plot_img_and_hist(enctypted, axes[:, 0])
+# ax_img, ax_hist = plot_img_and_hist(decrypted, axes[:, 0])
+# ax_hist.set_ylabel('Number of pixels', fontsize=25)
+# # prevent overlap of y-axis labels
+# fig.tight_layout()
+# plt.show()
 # toDo  сделать извлечение изображения из видео, атаку, статистические тесты
